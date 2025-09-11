@@ -1,0 +1,39 @@
+{
+  "name": "lightdata-user/orquestador-liit",
+  "description": "Backend Orquestador",
+  "type": "project",
+  "require": {
+    "lightdata-user/converse-larry": "*",
+    "lightdata-user/backend-core-pruebas": "*"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../converseLarry",
+      "options": {
+        "symlink": true
+      }
+    },
+    {
+      "type": "path",
+      "url": "../Pruebas-templates",
+      "options": {
+        "symlink": true
+      }
+    },
+        {
+      "type": "path",
+      "url": "../Backend-Core-Pruebas",
+      "options": {
+        "symlink": true
+      }
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}

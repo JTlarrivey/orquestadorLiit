@@ -1,0 +1,70 @@
+# SO / Editores
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
+
+# Logs y cachés generales
+logs/
+*.log
+*.cache
+.cache/
+tmp/
+temp/
+
+# Variables de entorno (¡no subas secretos!)
+.env
+.env.*.local
+.env.local
+*.env
+!.env.example
+
+# Composer / PHP
+vendor/
+composer.phar
+# ⚠️ composer.lock SÍ se commitea (si esto es una app)
+# !composer.lock   <- no descomentar
+
+# Plantillas compiladas / cachés comunes
+cache/
+smarty/cache/
+smarty/compile/
+twig-cache/
+# Si usás Twig en Symfony/Laravel:
+var/cache/
+var/logs/
+var/sessions/
+
+# Laravel (si aplica)
+storage/
+bootstrap/cache/
+
+# Symfony (si aplica)
+app/cache/
+app/logs/
+
+# PHPUnit / cobertura
+.phpunit.result.cache
+coverage/
+
+# Docker (opcional)
+docker-compose.override.yml
+**/.env.docker
+
+# Si además compilás assets con Node/Gulp/Webpack (opcional)
+node_modules/
+dist/
+build/
+public/build/
+public/assets/**
+!.keep
+.npm/
+yarn-error.log*
+npm-debug.log*
+pnpm-debug.log*
+.parcel-cache/
+.sass-cache/
+*.tsbuildinfo
