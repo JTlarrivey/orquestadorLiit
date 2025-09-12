@@ -42,8 +42,8 @@ if ($email === '' || $pass === '') {
 }
 
 // Llamar al CORE por URL
-$core = rtrim(getenv('BACKEND_CORE_URL') ?: '', '/'); // ej: https://core-XXXX.onrender.com
-$url  = $core . '/login'; // ajustá si tu core usa otra ruta
+$core = rtrim(getenv('BACKEND_CORE_URL') ?: '', '/'); // ej: https://core-XXXXX.onrender.com
+$url  = $core . '/login'; // <-- si tu Core usa otra ruta, cambiala acá
 
 $payload = ['email' => $email, 'role' => $role, 'password' => $pass];
 
@@ -51,24 +51,20 @@ $ch = curl_init($url);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
-    CURLOPT_HTTPHEADER     => [
-        'Content-Type: application/json',
-        'Accept: application/json',
-    ],
+    CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Accept: application/json'],
     CURLOPT_POSTFIELDS     => json_encode($payload),
     CURLOPT_TIMEOUT        => 15,
     CURLOPT_CONNECTTIMEOUT => 8,
-    CURLOPT_FOLLOWLOCATION => true,   // por si el Core redirige a https
+    CURLOPT_FOLLOWLOCATION => true,  // si el Core redirige a https
     CURLOPT_MAXREDIRS      => 5,
-    CURLOPT_ENCODING       => '',     // acepta gzip/deflate/brotli y lo descomprime
+    CURLOPT_ENCODING       => '',    // descomprime gzip/deflate/brotli
 ]);
-
 $res  = curl_exec($ch);
 $err  = ($res === false) ? curl_error($ch) : null;
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: 0;
 curl_close($ch);
 
-// LOG (solo en dev)
+// LOG a Render (solo en dev)
 if ((getenv('APP_ENV') ?: 'prod') !== 'prod') {
     error_log('[orq-login] core_url=' . $url . ' code=' . $code . ' len=' . (is_string($res) ? strlen($res) : 0) . ' err=' . ($err ?? ''));
 }
@@ -80,23 +76,13 @@ if ($err) {
 }
 
 if ($code >= 400) {
-    // El core devolvió error con algún cuerpo (o no)
     $coreErr = json_decode($res ?: '', true);
     http_response_code($code);
     echo json_encode(['valid' => false, 'error' => $coreErr['error'] ?? 'login_failed']);
     exit;
 }
 
-// ... después de hacer curl al Core y chequear $err y $code ...
-
 $coreJson = json_decode($res ?: '', true);
-
-if ($code >= 400) {
-    http_response_code($code);
-    echo json_encode(['valid' => false, 'error' => $coreJson['error'] ?? 'login_failed']);
-    exit;
-}
-
 if (!is_array($coreJson) || !$coreJson) {
     http_response_code(502);
     echo json_encode(['valid' => false, 'error' => 'empty_or_invalid_core_response']);
