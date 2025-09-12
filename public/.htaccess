@@ -1,13 +1,6 @@
-# front-controller a index.php
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
-
-  # si el archivo o carpeta existe, se sirve tal cual
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
-
-  # todo lo demás va a index.php
-  RewriteRule ^ index.php [L]
-</IfModule>
+DirectoryIndex index.php
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule ^ index.php [L]
