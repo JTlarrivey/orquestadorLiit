@@ -87,17 +87,23 @@ if ($code >= 400) {
     exit;
 }
 
-// En este punto esperamos JSON plano del Core: {user_id, name, role, ...}
+// ... después de hacer curl al Core y chequear $err y $code ...
+
 $coreJson = json_decode($res ?: '', true);
 
-// Si no pudimos parsear, es cuerpo vacío o no-JSON → error explícito
+if ($code >= 400) {
+    http_response_code($code);
+    echo json_encode(['valid' => false, 'error' => $coreJson['error'] ?? 'login_failed']);
+    exit;
+}
+
 if (!is_array($coreJson) || !$coreJson) {
     http_response_code(502);
     echo json_encode(['valid' => false, 'error' => 'empty_or_invalid_core_response']);
     exit;
 }
 
-// Normalizamos a {valid, user}
+// Normalizar SIEMPRE a {valid,user}
 http_response_code(200);
 echo json_encode([
     'valid' => true,
@@ -110,10 +116,3 @@ echo json_encode([
         'layout_pref' => $coreJson['layout_pref'] ?? 'default',
     ],
 ]);
-
-exit;
-
-
-// Fallback si el Core cambiara formato
-http_response_code(502);
-echo json_encode(['valid' => false, 'error' => 'bad_core_response', 'raw' => $coreJson]);
