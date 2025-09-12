@@ -42,8 +42,8 @@ if ($email === '' || $pass === '') {
 }
 
 // Llamar al CORE por URL
-$core = rtrim(getenv('BACKEND_CORE_URL') ?: '', '/'); // ej: https://core-XXXXX.onrender.com
-$url  = $core . '/login'; // <-- si tu Core usa otra ruta, cambiala acá
+$core = rtrim(getenv('BACKEND_CORE_URL') ?: '', '/');   // p.ej. https://core-xxxx.onrender.com
+$url  = $core . '/login';                               // ajustá si tu Core usa otra ruta
 
 $payload = ['email' => $email, 'role' => $role, 'password' => $pass];
 
@@ -55,18 +55,18 @@ curl_setopt_array($ch, [
     CURLOPT_POSTFIELDS     => json_encode($payload),
     CURLOPT_TIMEOUT        => 15,
     CURLOPT_CONNECTTIMEOUT => 8,
-    CURLOPT_FOLLOWLOCATION => true,  // si el Core redirige a https
+    CURLOPT_FOLLOWLOCATION => true,  // sigue 301/302
     CURLOPT_MAXREDIRS      => 5,
-    CURLOPT_ENCODING       => '',    // descomprime gzip/deflate/brotli
+    CURLOPT_ENCODING       => '',    // descomprime gzip/deflate/brotli si aplica
 ]);
 $res  = curl_exec($ch);
 $err  = ($res === false) ? curl_error($ch) : null;
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: 0;
 curl_close($ch);
 
-// LOG a Render (solo en dev)
+// Log en dev (ver en Logs del servicio orquestador)
 if ((getenv('APP_ENV') ?: 'prod') !== 'prod') {
-    error_log('[orq-login] core_url=' . $url . ' code=' . $code . ' len=' . (is_string($res) ? strlen($res) : 0) . ' err=' . ($err ?? ''));
+    error_log('[orq-login] url=' . $url . ' code=' . $code . ' len=' . (is_string($res) ? strlen($res) : 0) . ' err=' . ($err ?? ''));
 }
 
 if ($err) {
@@ -74,7 +74,6 @@ if ($err) {
     echo json_encode(['valid' => false, 'error' => 'core_unreachable', 'detail' => $err]);
     exit;
 }
-
 if ($code >= 400) {
     $coreErr = json_decode($res ?: '', true);
     http_response_code($code);
