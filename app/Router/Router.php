@@ -2,33 +2,55 @@
 
 declare(strict_types=1);
 
-if (!defined('APP_ROOT')) {
-    define('APP_ROOT', dirname(__DIR__));
+namespace App\Router;
+
+final class Router
+{
+    /**
+     * Router principal (tu implementación actual).
+     * Podés agregar más rutas acá si las necesitás.
+     */
+    public function handle(array $req = []): void
+    {
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $uri    = $_SERVER['REQUEST_URI'] ?? '/';
+        $path   = trim(parse_url($uri, PHP_URL_PATH) ?? '/', '/'); // '' si es raíz
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($method === 'OPTIONS') {
+            http_response_code(204);
+            return;
+        }
+
+        $key = $method . ' ' . ($path === '' ? '/' : $path);
+
+        switch ($key) {
+            // Health / raíz
+            case 'GET /':
+            case 'GET health':
+            case 'GET healthz':
+                echo json_encode(['ok' => true, 'service' => 'orquestador']);
+                return;
+
+                // acá podrías agregar más endpoints si querés
+                // case 'POST algo':
+                //   ...
+                //   return;
+
+            default:
+                http_response_code(404);
+                echo json_encode(['error' => 'Ruta no encontrada', 'path' => ($path === '' ? '/' : $path)]);
+                return;
+        }
+    }
+
+    /**
+     * Shim: deja vivo el código que llama a dispatch().
+     * Internamente solo delega a handle().
+     */
+    public function dispatch(): void
+    {
+        $this->handle();
+    }
 }
-require APP_ROOT . '/app/autoload.php';
-
-// Preflight
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
-
-// En prod no mostrar errores (evita romper headers con warnings)
-if ((getenv('APP_ENV') ?: 'prod') === 'prod') {
-    ini_set('display_errors', '0');
-    ini_set('log_errors', '1');
-}
-
-header('Content-Type: application/json; charset=utf-8');
-
-// Si tenés Router con método handle(), usalo
-if (class_exists(\App\Router\Router::class) && method_exists(\App\Router\Router::class, 'handle')) {
-    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
-    $path = ltrim($path, '/');
-    (new \App\Router\Router())->handle(['path' => $path]);
-    exit;
-}
-
-// Si no hay Router, devolvé health simple
-echo json_encode(['ok' => true, 'service' => 'orquestador']);
-exit;
