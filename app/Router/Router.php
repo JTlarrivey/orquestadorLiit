@@ -7,14 +7,13 @@ namespace App\Router;
 final class Router
 {
     /**
-     * Router principal (tu implementación actual).
-     * Podés agregar más rutas acá si las necesitás.
+     * Tu router real: resuelve rutas y responde.
      */
     public function handle(array $req = []): void
     {
         $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
         $uri    = $_SERVER['REQUEST_URI'] ?? '/';
-        $path   = trim(parse_url($uri, PHP_URL_PATH) ?? '/', '/'); // '' si es raíz
+        $path   = trim(parse_url($uri, PHP_URL_PATH) ?? '/', '/'); // '' si raíz
 
         header('Content-Type: application/json; charset=utf-8');
 
@@ -26,17 +25,13 @@ final class Router
         $key = $method . ' ' . ($path === '' ? '/' : $path);
 
         switch ($key) {
-            // Health / raíz
             case 'GET /':
             case 'GET health':
             case 'GET healthz':
                 echo json_encode(['ok' => true, 'service' => 'orquestador']);
                 return;
 
-                // acá podrías agregar más endpoints si querés
-                // case 'POST algo':
-                //   ...
-                //   return;
+                // acá podés agregar endpoints del orquestador si los necesitás
 
             default:
                 http_response_code(404);
@@ -46,8 +41,7 @@ final class Router
     }
 
     /**
-     * Shim: deja vivo el código que llama a dispatch().
-     * Internamente solo delega a handle().
+     * Compatibilidad: si alguien llama dispatch(), delega a handle().
      */
     public function dispatch(): void
     {

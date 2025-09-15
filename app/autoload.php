@@ -8,10 +8,12 @@ if (!defined('APP_ROOT')) {
 
 spl_autoload_register(function (string $class): void {
     $prefix  = 'App\\';
-    $baseDir = APP_ROOT . '/src/';  // ← mapear App\* a src/
+    $baseDir = APP_ROOT . '/app/';  // <<--- mapea a /app (no /src)
 
     if (strncmp($class, $prefix, strlen($prefix)) !== 0) return;
-    $relative = substr($class, strlen($prefix));                // p.ej. Router\Router
-    $file     = $baseDir . str_replace('\\', '/', $relative) . '.php'; // src/Router/Router.php
+
+    $relative = substr($class, strlen($prefix));               // p.ej. Router\Router
+    $file     = $baseDir . str_replace('\\', '/', $relative) . '.php';
+
     if (is_file($file)) require $file;
 });
