@@ -8,6 +8,9 @@ if (!defined('APP_ROOT')) {
 require APP_ROOT . '/app/autoload.php';
 
 // CORS básico (ajustá orígenes si querés)
+
+$frontOrigin = cfg('FRONT_ORIGIN_PROD', 'FRONT_ORIGIN_LOCAL', 'http://converse.local');
+
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if ($origin) {
     header("Access-Control-Allow-Origin: $origin");

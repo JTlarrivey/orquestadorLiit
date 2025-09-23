@@ -17,3 +17,21 @@ spl_autoload_register(function (string $class): void {
 
     if (is_file($file)) require $file;
 });
+
+if (!function_exists('cfg')) {
+    /**
+     * Devuelve el valor de una variable según APP_ENV.
+     * - Si APP_ENV=prod => usa $prodKey (fallback a $localKey)
+     * - Si APP_ENV!=prod => usa $localKey (fallback a $prodKey)
+     */
+    function cfg(string $prodKey, string $localKey, ?string $default = null): ?string
+    {
+        $env  = getenv('APP_ENV') ?: 'prod';
+        $keys = ($env === 'prod') ? [$prodKey, $localKey] : [$localKey, $prodKey];
+        foreach ($keys as $k) {
+            $v = getenv($k);
+            if ($v !== false && $v !== '') return $v;
+        }
+        return $default;
+    }
+}

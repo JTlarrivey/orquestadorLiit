@@ -2,30 +2,28 @@
 
 declare(strict_types=1);
 
-// --- bootstrap/autoload si lo usás ---
-define('APP_ROOT', dirname(__DIR__));
+if (!defined('APP_ROOT')) define('APP_ROOT', dirname(__DIR__));
 require APP_ROOT . '/app/autoload.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Solo POST y OPTIONS
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-if ($method === 'OPTIONS') {
+// Preflight
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
-if ($method !== 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     http_response_code(405);
     echo json_encode(['valid' => false, 'error' => 'method_not_allowed']);
     exit;
 }
 
-// Leer input (form o JSON)
+// Leer JSON o form
 $raw = file_get_contents('php://input') ?: '';
-$in  = $_POST ?: (json_decode($raw, true) ?? []);
-$email = trim($in['email'] ?? '');
-$role  = trim($in['role'] ?? '');
-$pass  = (string)($in['password'] ?? '');
+$data = $_POST ?: (json_decode($raw, true) ?? []);
+$email = trim($data['email'] ?? '');
+$pass  = (string)($data['password'] ?? '');
+$role  = trim($data['role'] ?? '');
 
 if ($email === '' || $pass === '') {
     http_response_code(400);
@@ -33,75 +31,45 @@ if ($email === '' || $pass === '') {
     exit;
 }
 
-// URL del Core
-$coreBase = rtrim(getenv('BACKEND_CORE_URL') ?: '', '/');
-$coreUrl  = $coreBase . '/login';
-
-// cURL al Core
-$ch = curl_init($coreUrl);
+// Llamar al Core
+$coreBase = rtrim(getenv('BACKEND_CORE_URL') ?: 'http://core.local', '/');
+$ch = curl_init($coreBase . '/login');
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
     CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Accept: application/json'],
-    CURLOPT_POSTFIELDS     => json_encode(['email' => $email, 'role' => $role, 'password' => $pass]),
-    CURLOPT_TIMEOUT        => 15,
-    CURLOPT_CONNECTTIMEOUT => 8,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_MAXREDIRS      => 5,
-    CURLOPT_ENCODING       => '',                 // descomprime si viene gzip/brotli
-    CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+    CURLOPT_POSTFIELDS     => json_encode(['email' => $email, 'password' => $pass]),
+    CURLOPT_TIMEOUT        => 12,
+    CURLOPT_CONNECTTIMEOUT => 5,
 ]);
-$coreRes  = curl_exec($ch);
-$coreErr  = ($coreRes === false) ? curl_error($ch) : null;
-$coreCode = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: 0;
+$res  = curl_exec($ch);
+$err  = ($res === false) ? curl_error($ch) : null;
+$code = curl_getinfo($ch, CURLINFO_HTTP_CODE) ?: 0;
 curl_close($ch);
 
-// Log (solo si APP_ENV != prod)
-if ((getenv('APP_ENV') ?: 'prod') !== 'prod') {
-    error_log('[orq-login] url=' . $coreUrl . ' code=' . $coreCode . ' len=' . (is_string($coreRes) ? strlen($coreRes) : 0) . ' err=' . ($coreErr ?? ''));
-}
-
-if ($coreErr) {
+if ($err) {
     http_response_code(502);
-    // FORZAMOS cuerpo
-    $out = json_encode(['valid' => false, 'error' => 'core_unreachable', 'detail' => $coreErr]);
-    header('Content-Length: ' . strlen($out));
-    echo $out;
+    echo json_encode(['valid' => false, 'error' => 'core_unreachable', 'detail' => $err]);
     exit;
 }
 
-if ($coreCode >= 400) {
-    $j = json_decode($coreRes ?: '', true);
-    http_response_code($coreCode);
-    $out = json_encode(['valid' => false, 'error' => $j['error'] ?? 'login_failed']);
-    header('Content-Length: ' . strlen($out));
-    echo $out;
+$core = json_decode($res ?: '', true);
+
+// Éxito del Core: normalizar a {valid,user}
+if ($code === 200 && is_array($core) && isset($core['user_id'])) {
+    $user = [
+        'user_id'     => $core['user_id'],
+        'name'        => $core['name'] ?? 'Sin nombre',
+        'role'        => $core['role'] ?? null,
+        'permissions' => $core['permissions'] ?? [],
+        'jerarquia'   => $core['jerarquia'] ?? null,
+        'layout_pref' => $core['layout_pref'] ?? 'default',
+    ];
+    http_response_code(200);
+    echo json_encode(['valid' => true, 'user' => $user]);
     exit;
 }
 
-// Parsear y normalizar
-$j = json_decode($coreRes ?: '', true);
-if (!is_array($j) || !$j) {
-    http_response_code(502);
-    $out = json_encode(['valid' => false, 'error' => 'empty_or_invalid_core_response']);
-    header('Content-Length: ' . strlen($out));
-    echo $out;
-    exit;
-}
-
-// Salida OK normalizada
-http_response_code(200);
-$out = json_encode([
-    'valid' => true,
-    'user'  => [
-        'user_id'     => $j['user_id']     ?? null,
-        'name'        => $j['name']        ?? 'Sin nombre',
-        'role'        => $j['role']        ?? null,
-        'permissions' => $j['permissions'] ?? [],
-        'jerarquia'   => $j['jerarquia']   ?? null,
-        'layout_pref' => $j['layout_pref'] ?? 'default',
-    ],
-]);
-// FORZAMOS cuerpo (por tu 200 len=0)
-header('Content-Length: ' . strlen($out));
-echo $out;
+// Cualquier otro caso: propagar error
+http_response_code($code ?: 500);
+echo json_encode(['valid' => false, 'error' => $core['error'] ?? 'login_failed']);
