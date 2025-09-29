@@ -28,7 +28,7 @@ if ($email === '' || $pass === '') {
     exit;
 }
 
-$coreBase = rtrim(getenv('BACKEND_CORE_URL') ?: '', '/');
+$coreBase = rtrim(cfg('BACKEND_CORE_URL', 'BACKEND_CORE_URL_LOCAL', 'http://core.local'), '/');
 $corePath = '/' . ltrim((getenv('CORE_LOGIN_PATH') ?: '/login'), '/');
 if ($coreBase === '') {
     http_response_code(500);
