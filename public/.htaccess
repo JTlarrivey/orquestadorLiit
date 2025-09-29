@@ -3,7 +3,10 @@
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
-  RewriteRule ^handleLogin\.php - [L]   # ← importantísimo
+
+  # Dejar pasar el endpoint de login del ORQ
+  RewriteRule ^handleLogin\.php - [L]
+
   RewriteRule ^index\.php$ - [L]
   RewriteRule . index.php [QSA,L]
 </IfModule>
