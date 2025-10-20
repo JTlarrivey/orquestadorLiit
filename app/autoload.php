@@ -8,7 +8,7 @@ if (!defined('APP_ROOT')) {
 
 /**
  * Carga variables desde un archivo .env (sin dependencias).
- * - Soporta líneas con: KEY=value, KEY="valor con espacios=y=" y KEY='...'
+ * - Soporta líneas con: KEY=value, KEY="valor con espacios" y KEY='...'
  * - Expande ${OTRA_VAR} si ya está definida en env o fue cargada antes.
  * - No pisa variables ya presentes en el entorno (override=false).
  */
@@ -52,7 +52,6 @@ if (!function_exists('load_dotenv')) {
             // no pisar si ya existe y override=false
             $already = getenv($key);
             if ($already !== false && $already !== '' && !$override) {
-                // sincronizar en arrays superglobales igualmente
                 $_ENV[$key]    = $already;
                 $_SERVER[$key] = $already;
                 continue;
@@ -72,19 +71,31 @@ load_dotenv(APP_ROOT . '/.env', false);
 // Autoload de clases PSR-4 para el namespace App\...
 // ---------------------------------------------------------
 spl_autoload_register(function (string $class): void {
-    $prefix  = 'App\\';
-    $baseDir = APP_ROOT . '/app/';
+    $prefix = 'App\\';
+    $baseDirs = [
+        APP_ROOT . '/app/', // para clases internas del orquestador
+        APP_ROOT . '/src/', // para Data/Shaper, Services, etc.
+    ];
+
     if (strncmp($class, $prefix, strlen($prefix)) !== 0) return;
 
     $relative = substr($class, strlen($prefix));
-    $file     = $baseDir . str_replace('\\', '/', $relative) . '.php';
-    if (is_file($file)) require $file;
+    $relativePath = str_replace('\\', '/', $relative) . '.php';
+
+    foreach ($baseDirs as $dir) {
+        $file = $dir . $relativePath;
+        if (is_file($file)) {
+            require_once $file;
+            return;
+        }
+    }
+
+    // Log opcional para debug (puede comentarse en producción)
+    // error_log("Clase no encontrada: {$class}");
 });
 
 // ---------------------------------------------------------
 // Helper cfg(): toma una key de PROD y una de LOCAL
-// - APP_ENV=prod => usa $prodKey (fallback a $localKey)
-// - APP_ENV!=prod => usa $localKey (fallback a $prodKey)
 // ---------------------------------------------------------
 if (!function_exists('cfg')) {
     function cfg(string $prodKey, string $localKey, ?string $default = null): ?string
